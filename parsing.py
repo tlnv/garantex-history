@@ -5,6 +5,7 @@ from selenium.webdriver.chrome.options import Options
 from bs4 import BeautifulSoup
 from itertools import zip_longest
 from pprint import pprint
+import schedule
 
 
 def get_deals(table):
@@ -13,7 +14,7 @@ def get_deals(table):
     deals_details = {}
     for deal in deals:
         deal_details = deal.find_all("td")
-        deals_details[deal_details[0].text.replace("#", "")]= {
+        deals_details[deal_details[0].text.replace("#", "")] = {
             "datetime": deal_details[1].text,
             "seller": deal_details[2].text,
             "buyer": deal_details[3].text,
@@ -25,23 +26,34 @@ def get_deals(table):
             "final_cost": deal_details[9].text
         }
     return deals_details
-    
 
-chrome_options = Options()
-chrome_options.add_argument(
-    '--user-data-dir=C:\\Users\\tlnv\\AppData\\Local\\Google\\Chrome\\User Data\\') # отдаем Селениуму параметры браузера, в которых вход в garantex уже произведен
-chrome_options.add_argument('--profile-directory=Profile 1')
-driver = webdriver.Chrome(
-    ChromeDriverManager().install(), options=chrome_options) #запускаем браузер
-driver.get("https://garantex.io/deals") # идем на нужню страницу
-sleep(3) # ждем пока сайт считает слепок браузера
-html_page = driver.page_source 
-driver.close()
-soup = BeautifulSoup(html_page, 'html.parser')
-tables = soup.find_all("table", class_="table table-condensed table-striped")
-statuses = "active", "succeeded", "canceled"
-deals = {}
-for (status, table) in zip_longest(statuses, tables):
-    deals[status] = get_deals(table)
 
-pprint(deals)
+def observe():
+    chrome_options = Options()
+    chrome_options.add_argument(
+        '--user-data-dir=C:\\Users\\tlnv\\AppData\\Local\\Google\\Chrome\\User Data\\')  # отдаем Селениуму параметры браузера, в которых вход в garantex уже произведен
+    chrome_options.add_argument('--profile-directory=Profile 1')
+    driver = webdriver.Chrome(
+        ChromeDriverManager().install(), options=chrome_options)  # запускаем браузер
+    driver.get("https://garantex.io/deals")  # идем на нужню страницу
+    sleep(3)  # ждем пока сайт считает слепок браузера
+    html_page = driver.page_source
+    driver.close()
+    soup = BeautifulSoup(html_page, 'html.parser')
+    tables = soup.find_all(
+        "table", class_="table table-condensed table-striped")
+    statuses = "active", "succeeded", "canceled"
+    deals = {}
+    for (status, table) in zip_longest(statuses, tables):
+        deals[status] = get_deals(table)
+    pprint(deals)
+
+
+def main():
+    schedule.every(2).minutes.do(observe)
+    while True:
+        schedule.run_pending()
+        sleep(1)
+
+
+main()
