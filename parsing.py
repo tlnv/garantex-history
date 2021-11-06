@@ -6,7 +6,11 @@ from bs4 import BeautifulSoup
 from itertools import zip_longest
 from pprint import pprint
 import schedule
+import os
 
+
+CHROME_DIR = "C:\\Users\\tlnv\\AppData\\Local\\Google\\Chrome\\User Data\\"
+USER_PROFILE = 'Profile 1'
 
 def get_deals(table):
     table_body = table.find("tbody")
@@ -28,20 +32,28 @@ def get_deals(table):
     return deals_details
 
 
+def clear_history():
+    os.remove(f"{CHROME_DIR}\\{USER_PROFILE}\\History")
+
 def observe():
     chrome_options = Options()
-    chrome_options.add_argument(
-        '--user-data-dir=C:\\Users\\tlnv\\AppData\\Local\\Google\\Chrome\\User Data\\')  # отдаем Селениуму параметры браузера, в которых вход в garantex уже произведен
-    chrome_options.add_argument('--profile-directory=Profile 1')
+    chrome_options.add_argument(f'--user-data-dir={CHROME_DIR}')  # отдаем Селениуму параметры браузера, в которых вход в garantex уже произведен
+    chrome_options.add_argument(f'--profile-directory={USER_PROFILE}')
     driver = webdriver.Chrome(
         ChromeDriverManager().install(), options=chrome_options)  # запускаем браузер
-    driver.get("https://garantex.io/deals")  # идем на нужню страницу
+    driver.get("https://garantex.io")
+    try:
+        login_button = driver.find_element_by_link_text("Вход")
+        login_button.click()
+    except:
+        pass
     sleep(3)  # ждем пока сайт считает слепок браузера
+    driver.get("https://garantex.io/deals")
     html_page = driver.page_source
     driver.close()
     soup = BeautifulSoup(html_page, 'html.parser')
     tables = soup.find_all(
-        "table", class_="table table-condensed table-striped")
+        "table", class_="table table-condensed table-striped") # читаем таблицы активных.ю завершеных и отмененных сделок
     statuses = "active", "succeeded", "canceled"
     deals = {}
     for (status, table) in zip_longest(statuses, tables):
@@ -51,6 +63,7 @@ def observe():
 
 def main():
     schedule.every(2).minutes.do(observe)
+    schedule.every(60).days.do(clear_history)
     while True:
         schedule.run_pending()
         sleep(1)
