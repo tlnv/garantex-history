@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 from itertools import zip_longest
 from pprint import pprint
 import schedule
+import json
 import os
 
 
@@ -53,16 +54,22 @@ def observe():
     driver.close()
     soup = BeautifulSoup(html_page, 'html.parser')
     tables = soup.find_all(
-        "table", class_="table table-condensed table-striped") # читаем таблицы активных.ю завершеных и отмененных сделок
+        "table", class_="table table-condensed table-striped") # читаем таблицы активных, завершеных и отмененных сделок
     statuses = "active", "succeeded", "canceled"
-    deals = {}
+    formed_deals = {}
     for (status, table) in zip_longest(statuses, tables):
-        deals[status] = get_deals(table)
-    pprint(deals)
+        formed_deals[status] = get_deals(table)
+    return formed_deals
+
+
+def create_json():
+    formed_deals = observe()
+    with open("deals.json", "w", encoding = "utf-8") as file:
+        json.dump(formed_deals, file, ensure_ascii=False)
 
 
 def main():
-    schedule.every(2).minutes.do(observe)
+    schedule.every(1).minutes.do(create_json)
     schedule.every(60).days.do(clear_history)
     while True:
         schedule.run_pending()
