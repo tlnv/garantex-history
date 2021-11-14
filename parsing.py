@@ -4,14 +4,12 @@ from time import sleep
 from selenium.webdriver.chrome.options import Options
 from bs4 import BeautifulSoup
 from itertools import zip_longest
-from pprint import pprint
-import schedule
-import json
 import os
 
 
 CHROME_DIR = "C:\\Users\\tlnv\\AppData\\Local\\Google\\Chrome\\User Data\\"
-USER_PROFILE = 'Profile 1'
+USER_PROFILE = 'Default'
+
 
 def get_deals(table):
     table_body = table.find("tbody")
@@ -36,9 +34,11 @@ def get_deals(table):
 def clear_history():
     os.remove(f"{CHROME_DIR}\\{USER_PROFILE}\\History")
 
+
 def observe():
     chrome_options = Options()
-    chrome_options.add_argument(f'--user-data-dir={CHROME_DIR}')  # отдаем Селениуму параметры браузера, в которых вход в garantex уже произведен
+    # отдаем Селениуму параметры браузера, в которых вход в garantex уже произведен
+    chrome_options.add_argument(f'--user-data-dir={CHROME_DIR}')
     chrome_options.add_argument(f'--profile-directory={USER_PROFILE}')
     driver = webdriver.Chrome(
         ChromeDriverManager().install(), options=chrome_options)  # запускаем браузер
@@ -54,26 +54,9 @@ def observe():
     driver.close()
     soup = BeautifulSoup(html_page, 'html.parser')
     tables = soup.find_all(
-        "table", class_="table table-condensed table-striped") # читаем таблицы активных, завершеных и отмененных сделок
+        "table", class_="table table-condensed table-striped")  # читаем таблицы активных, завершеных и отмененных сделок
     statuses = "active", "succeeded", "canceled"
     formed_deals = {}
     for (status, table) in zip_longest(statuses, tables):
         formed_deals[status] = get_deals(table)
     return formed_deals
-
-
-def create_json():
-    formed_deals = observe()
-    with open("deals.json", "w", encoding = "utf-8") as file:
-        json.dump(formed_deals, file, ensure_ascii=False)
-
-
-def main():
-    schedule.every(1).minutes.do(create_json)
-    schedule.every(60).days.do(clear_history)
-    while True:
-        schedule.run_pending()
-        sleep(1)
-
-
-main()
